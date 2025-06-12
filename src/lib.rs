@@ -1,69 +1,71 @@
 mod horspool;
 
+use horspool::Horsepool;
 use std::env;
 use std::fs;
-use horspool::Horsepool;
 
-pub struct Config{
-    pattern : String,
-    file_path : String,
-    flags : Flags
+pub struct Config {
+    pattern: String,
+    file_path: String,
+    flags: Flags,
 }
 
-struct Flags{
-    ignore_case : bool,
-    line_number : bool,
-    word_count : bool
+struct Flags {
+    ignore_case: bool,
+    line_number: bool,
+    word_count: bool,
 }
 
-struct Content<'a>{
-    line : &'a str,
-    line_number : u32
+struct Content<'a> {
+    line: &'a str,
+    line_number: u32,
 }
 
-impl Flags{
-    fn new() -> Self{
-        Self { ignore_case: false, line_number: false, word_count: false }
+impl Flags {
+    fn new() -> Self {
+        Self {
+            ignore_case: false,
+            line_number: false,
+            word_count: false,
+        }
     }
 }
 
 impl Config {
-    pub fn build(mut args: env::Args) -> Result<Config,&'static str>{
-        args.next() ; // to skip the first argument
-        
-        let pattern = match args.next(){
+    pub fn build(mut args: env::Args) -> Result<Config, &'static str> {
+        args.next(); // to skip the first argument
+
+        let pattern = match args.next() {
             Some(pattern) => pattern,
-            None => return Err("USAGE minigrep PATTERN FILE -FLAGS")
+            None => return Err("USAGE minigrep PATTERN FILE -FLAGS"),
         };
 
-
-        let file_path = match args.next(){
+        let file_path = match args.next() {
             Some(file_path) => file_path,
-            None => return Err("FILE PATH NOT GIVEN")
+            None => return Err("FILE PATH NOT GIVEN"),
         };
 
         // iteration over the flags
         let mut flags = Flags::new();
 
-        for flag in args{
-            match flag.as_str(){
+        for flag in args {
+            match flag.as_str() {
                 "-i" => flags.ignore_case = true,
                 "-n" => flags.line_number = true,
                 "-c" => flags.word_count = true,
-                _ => return Err("unknown flag specified")
+                _ => return Err("unknown flag specified"),
             }
         }
 
-        Ok(Config{
+        Ok(Config {
             pattern,
             file_path,
-            flags
+            flags,
         })
-
     }
 }
 
-// Function to read the file
+// Function to read the FIle
 
 pub fn run(config: Config) -> Result<(), &'static str> {
     let file = match fs::read_to_string(&config.file_path) {
@@ -73,35 +75,32 @@ pub fn run(config: Config) -> Result<(), &'static str> {
 
     let result = search(&config.pattern, &file, &config.flags);
     if config.flags.word_count {
-        println!("Total matches found: {}",result.len());
+        println!("Total matches found: {}", result.len());
         return Ok(());
     }
-    for line in &result{
+
+    for content in result {
         if config.flags.line_number {
-            println!("{} {}", line.line_number, line.line.trim());
+            println!("{} {}", content.line_number, content.line.trim());
         } else {
-            println!("{}", line.line.trim())
+            println!("{}", content.line.trim())
         }
     }
     Ok(())
 }
 
-fn search<'b>(query: &str, content: &'b str,flags: &Flags) -> Vec<Content<'b>> {
-
+fn search<'b>(query: &str, content: &'b str, flags: &Flags) -> Vec<Content<'b>> {
     let mut line_number: u32 = 0;
     let horspool = Horsepool::build(query, flags.ignore_case);
-    let mut result :Vec<Content> = Vec::new(); 
+    let mut result: Vec<Content> = Vec::new();
 
-    for line in content.lines(){
-        if horspool.search(&line){
-            result.push(Content{
-                line,
-                line_number
-            })
+    for line in content.lines() {
+        if horspool.search(&line) {
+            result.push(Content { line, line_number })
         }
 
         line_number += 1;
     }
 
     result
-   }
+}
