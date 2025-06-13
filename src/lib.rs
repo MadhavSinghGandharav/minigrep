@@ -1,6 +1,6 @@
 mod horspool;
 
-use horspool::Horsepool;
+use horspool::{Horsepool, Match};
 use std::env;
 use std::fs;
 
@@ -16,8 +16,8 @@ struct Flags {
     word_count: bool,
 }
 
-struct Content<'a> {
-    line: &'a str,
+struct Content {
+    line: String,
     line_number: u32,
 }
 
@@ -89,18 +89,43 @@ pub fn run(config: Config) -> Result<(), &'static str> {
     Ok(())
 }
 
-fn search<'b>(query: &str, content: &'b str, flags: &Flags) -> Vec<Content<'b>> {
+fn search(query: &str, content: &str, flags: &Flags) -> Vec<Content> {
     let mut line_number: u32 = 0;
     let horspool = Horsepool::build(query, flags.ignore_case);
     let mut result: Vec<Content> = Vec::new();
 
     for line in content.lines() {
-        if horspool.search(&line) {
-            result.push(Content { line, line_number })
+        let matches = horspool.search(line);
+        if !matches.is_empty() {
+            let line = highlight_line(line, matches);
+            result.push(Content {
+                line: line,
+                line_number,
+            })
         }
-
         line_number += 1;
     }
+    result
+}
+
+fn highlight_line(line: &str, matches: Vec<Match>) -> String {
+    let mut result = String::new();
+    let mut last_end = 0;
+
+    for match_info in matches {
+        // Add text before the match
+        result.push_str(&line[last_end..match_info.start]);
+
+        // Add highlighted match (using ANSI color codes)
+        result.push_str("\x1b[1;31m"); // Bold red
+        result.push_str(&line[match_info.start..match_info.end]);
+        result.push_str("\x1b[0m"); // Reset color
+
+        last_end = match_info.end;
+    }
+
+    // Add remaining text after the last match
+    result.push_str(&line[last_end..]);
 
     result
 }

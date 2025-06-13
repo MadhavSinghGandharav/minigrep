@@ -5,6 +5,11 @@ pub struct Horsepool {
     needle: Vec<u8>,
 }
 
+pub struct Match {
+    pub start: usize,
+    pub end: usize,
+}
+
 impl Horsepool {
     pub fn build(string: &str, ignore_case: bool) -> Self {
         let mut string = string.as_bytes().to_vec(); // convert to Vec<u8>
@@ -27,11 +32,12 @@ impl Horsepool {
         }
     }
 
-    pub fn search(&self, haystack: &str) -> bool {
+    pub fn search(&self, haystack: &str) -> Vec<Match> {
         let n = haystack.len();
+        let mut matches: Vec<Match> = Vec::new();
 
         if n < self.needle_length {
-            return false;
+            return matches;
         }
         // convert haystack to bytes
         let mut haystack = haystack.as_bytes().to_vec();
@@ -51,13 +57,16 @@ impl Horsepool {
             }
 
             if i == self.needle_length {
-                return true;
+                matches.push(Match {
+                    start: j - self.needle_length + 1,
+                    end: j + 1,
+                });
             }
 
             j += self.table[haystack[j] as usize];
         }
 
-        false
+        matches
     }
 
     fn convert_to_lowercase(arr: &mut [u8]) {
